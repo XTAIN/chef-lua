@@ -10,3 +10,5 @@ if [ -f "/etc/chef/config.json" ]; then
   echo "First run"
   chef-client
 fi
+
+rm /opt/chef/setup
