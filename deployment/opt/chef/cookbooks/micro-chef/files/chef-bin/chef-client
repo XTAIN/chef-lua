@@ -1,0 +1,4 @@
+#!/bin/ash
+
+cd /opt/chef/bin
+lua chef-client.lua

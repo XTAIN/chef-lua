@@ -1,0 +1,7 @@
+name             'micro-chef'
+maintainer       'XTAIN oHG'
+maintainer_email 'mr@xtain.net'
+license          'All rights reserved'
+description      'Installs/Configures micro-chef'
+long_description ''
+version          '0.1.6'
