@@ -1,0 +1,12 @@
+#!/bin/ash
+
+echo "Install dependencies"
+opkg update
+opkg install lua luasec libopenssl openssl-util
+
+if [ -f "/etc/chef/config.json" ]; then
+  chown root:root /etc/chef/*
+  chmod 0500 /etc/chef/*
+  echo "First run"
+  chef-client
+fi
