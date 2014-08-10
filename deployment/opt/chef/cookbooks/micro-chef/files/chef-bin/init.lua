@@ -67,13 +67,25 @@ function log(msg, level)
 end
 
 
-
 configData = file_get_contents("config.json")
 if configData == nil then
     configData = file_get_contents("/etc/chef/config.json")
 end
 
 config = JSON:decode(configData)
+
+function writeAttributes()
+    local attributes = ChefClient.getNodeAttributes()
+    file_put_contents(config["cookbooks"] .. "/attributes.json", JSON:encode(attributes))
+end
+
+function readAttributes()
+    return JSON:decode(file_get_contents(config["cookbooks"] .. "/attributes.json"))
+end
+
+function interpolate(s, tab)
+  return (s:gsub('($%b{})', function(w) return tab[w:sub(3, -2)] or w end))
+end
 
 -- log(dump(config), LOG_LEVEL_DEBUG)
 

@@ -255,7 +255,7 @@ function ChefClient.ohai.get()
 	data = {
 		counters = {}
 	}
-	
+
 	data['ohai_time'] = socket.gettime()
 	data['fqdn'] = ChefClient.ohai.fqdn()
 	data['hostname'] = ChefClient.ohai.hostname()
@@ -1144,10 +1144,10 @@ function ChefClient.getNodeAttributes(nodeName, environmentName)
 
 	local automaticAttributes = {}
 
-	local override = {}
-	local default = {}
+	local override = clone(node["override"])
+	local default = clone(node["default"])
 	local normal = clone(node["normal"])
-	local automatic = {}
+	local automatic = clone(node["automatic"])
 	local result = {}
 
 	ChefClient.mergeTable(default, environment["default_attributes"])
@@ -1240,6 +1240,10 @@ function ChefClient.api.saveNode(data, name)
 	end
 	local node = ChefClient.api.getNodeMetadata(name)
 	data["name"] = name
+	if data["automatic"] == nil then
+		data["automatic"] = {}
+	end
+	data["automatic"]["name"] = name
 	data["chef_type"] = "node"
 	data["json_class"] = "Chef::Node"
 	if data["run_list"] == nil then
