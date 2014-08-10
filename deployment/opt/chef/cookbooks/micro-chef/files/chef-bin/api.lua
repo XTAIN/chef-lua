@@ -3,41 +3,42 @@ local hasSecHTTP, http = pcall(require, "ssl.https")
 if not hasSecHTTP then
 	local http = require("socket.http")
 end
+local socket = require("socket")
 local ltn12 = require("ltn12")
 
-local ChefClient = { api = {}, cacheData = {}, REQUEST_TRYS = 10, REQUEST_TIMEOUT = 10, REQUEST_CACHE_READ = 1, REQUEST_CACHE_WRITE = 2, REQUEST_CACHE_READ_WRITE = 3 }
+local ChefClient = { api = {}, ohai = {}, cacheData = {}, REQUEST_TRYS = 10, REQUEST_TIMEOUT = 10, REQUEST_CACHE_READ = 1, REQUEST_CACHE_WRITE = 2, REQUEST_CACHE_READ_WRITE = 3 }
 
 function dump(data)
-    -- cache of tables already printed, to avoid infinite recursive loops
-    local tablecache = {}
-    local buffer = ""
-    local padder = "    "
+	-- cache of tables already printed, to avoid infinite recursive loops
+	local tablecache = {}
+	local buffer = ""
+	local padder = "    "
 
-    local function _dump(d, depth)
-        local t = type(d)
-        local str = tostring(d)
-        if (t == "table") then
-            if (tablecache[str]) then
-                -- table already dumped before, so we dont
-                -- dump it again, just mention it
-                buffer = buffer.."<"..str..">\n"
-            else
-                tablecache[str] = (tablecache[str] or 0) + 1
-                buffer = buffer.."("..str..") {\n"
-                for k, v in pairs(d) do
-                    buffer = buffer..string.rep(padder, depth+1).."["..k.."] => "
-                    _dump(v, depth+1)
-                end
-                buffer = buffer..string.rep(padder, depth).."}\n"
-            end
-        elseif (t == "number") then
-            buffer = buffer.."("..t..") "..str.."\n"
-        else
-            buffer = buffer.."("..t..") \""..str.."\"\n"
-        end
-    end
-    _dump(data, 0)
-    return buffer
+	local function _dump(d, depth)
+		local t = type(d)
+		local str = tostring(d)
+		if (t == "table") then
+			if (tablecache[str]) then
+				-- table already dumped before, so we dont
+				-- dump it again, just mention it
+				buffer = buffer.."<"..str..">\n"
+			else
+				tablecache[str] = (tablecache[str] or 0) + 1
+				buffer = buffer.."("..str..") {\n"
+				for k, v in pairs(d) do
+					buffer = buffer..string.rep(padder, depth+1).."["..k.."] => "
+					_dump(v, depth+1)
+				end
+				buffer = buffer..string.rep(padder, depth).."}\n"
+			end
+		elseif (t == "number") then
+			buffer = buffer.."("..t..") "..str.."\n"
+		else
+			buffer = buffer.."("..t..") \""..str.."\"\n"
+		end
+	end
+	_dump(data, 0)
+	return buffer
 end
 
 local child = function(script)
@@ -45,23 +46,23 @@ local child = function(script)
 end
 
 local isArray = function(t)
-    if type(t) ~= "table" then
-    	return false
-    end
-    local count = 0
-    for k, v in pairs(t) do
-        if type(k) ~= "number" then
-        	return false
-        else
-        	count = count + 1
-        end
-    end
-    for i = 1, count do
+	if type(t) ~= "table" then
+		return false
+	end
+	local count = 0
+	for k, v in pairs(t) do
+		if type(k) ~= "number" then
+			return false
+		else
+			count = count + 1
+		end
+	end
+	for i = 1, count do
 		if not t[i] and type(t[i]) ~= "nil" then
 			return false
 		end
-    end
-    return true
+	end
+	return true
 end
 
 local clone = function(data)
@@ -71,7 +72,7 @@ end
 local execute = function(command, input)
 	local handle
 	if input then
-		handle = io.popen("printf '" .. input .. "' | " .. command)
+		handle = io.popen("echo -n '" .. input .. "' | " .. command)
 	else
 		handle = io.popen(command)
 	end
@@ -184,23 +185,521 @@ end
 
 -- Helper function which reads the contents of a file(This function is from the helloworld.lua example above)
 local fileGetContents = function(filename)
-    local file = io.open(filename, "r")
-    if not file then
-        return nil
-    end
+	local file = io.open(filename, "r")
+	if not file then
+		return nil
+	end
 
-    local contents = file:read("*all") -- See Lua manual for more information
-    file:close() -- GC takes care of this if you would've forgotten it
+	local contents = file:read("*all") -- See Lua manual for more information
+	file:close() -- GC takes care of this if you would've forgotten it
 
-    return contents
+	return contents
 end
 
 local filePutContents = function(file, data)
-  local f = io.open(file, "w")
-  f:write(data)
-  f:close()
+	local f = io.open(file, "w")
+	f:write(data)
+	f:close()
 end
 
+local random = math.random
+local function uuid()
+	local template ='xxxxxxxx-xxxx-4xxx-xxxx-xxxxxxxxxxxx'
+	return string.gsub(template, '[xy]', function (c)
+		local v = (c == 'x') and random(0, 0xf) or random(8, 0xb)
+		return string.format('%x', v)
+	end)
+end
+
+local function lines(str)
+	local t = {}
+	local function helper(line) table.insert(t, line) return "" end
+	helper((str:gsub("(.-)\r?\n", helper)))
+	return t
+end
+
+local function spaceSeperatedValues(str)
+	local t = {}
+	local function helper(line) table.insert(t, line) return "" end
+	helper((str:gsub("(.-)[%s]+", helper)))
+	return t
+end
+
+local function secondsToHuman(seconds)
+	seconds = math.floor(tonumber(seconds))
+
+	local days = math.floor(seconds / 86400)
+	seconds = seconds - (86400 * days)
+
+	local hours = math.floor(seconds / 3600)
+	seconds = seconds - (3600 * hours)
+
+	local minutes = math.floor(seconds / 60)
+	seconds = seconds - (60 * minutes)
+
+	if days > 1 then
+		return string.format("%.0f days %.0f hours %.0f minutes %.0f seconds", days, hours, minutes, seconds)
+	elseif days == 1 then
+		return string.format("%.0f day %.0f hours %.0f minutes %.0f seconds", days, hours, minutes, seconds)
+	elseif hours > 0 then
+		return string.format("%.0f hours %.0f minutes %.0f seconds", hours, minutes, seconds)
+	elseif minutes > 0 then
+		return string.format("%.0f minutes %.0f seconds", minutes, seconds)
+	else
+		return string.format("%.0f seconds", seconds)
+	end
+end
+
+function ChefClient.ohai.get()
+	local counters
+	data = {
+		counters = {}
+	}
+	
+	data['ohai_time'] = socket.gettime()
+	data['fqdn'] = ChefClient.ohai.fqdn()
+	data['hostname'] = ChefClient.ohai.hostname()
+	data['kernel'] = ChefClient.ohai.kernel()
+	data['memory'] = ChefClient.ohai.memory()
+	data['cpu'] = ChefClient.ohai.cpu()
+	data['filesystem'] = ChefClient.ohai.filesystem()
+	data['uptime_seconds'], data['uptime'], data['idletime_seconds'], data['idletime'] = ChefClient.ohai.uptime()
+	
+	if data['counters']['network'] == nil then
+		data['counters']['network'] = {}
+	end
+	if data['counters']['network']['interfaces'] == nil then
+		data['counters']['network']['interfaces'] = {}
+	end
+	data['network'], data['counters']['network']['interfaces'] = ChefClient.ohai.network()
+
+	data['os'], data['os_version'], data['platform'], data['platform_family'], data['platform_version'] = ChefClient.ohai.os()
+
+	return data
+end
+
+function ChefClient.ohai.network()
+	local iface = {}
+	local net_counters = {}
+
+	local network = {}
+
+	local function linuxEncapsLookup(encap)
+		if		encap == "Local Loopback" or encap == "loopback" then
+			return "Loopback"
+		elseif	encap == "Point-to-Point Protocol" then
+			return "PPP"
+		elseif	encap == "Serial Line IP" then
+			return "SLIP"
+		elseif	encap == "VJ Serial Line IP" then
+			return "VJSLIP"
+		elseif	encap == "IPIP Tunnel" then
+			return "IPIP"
+		elseif	encap == "IPv6-in-IPv4" then
+			return "6to4"
+		elseif	encap == "ether" then
+			return "Ethernet"
+		else
+			return nil
+		end
+	end
+
+	local so = lines(execute("route -n"))
+	for key, line in pairs(so) do
+		if string.match(line, "^0.0.0.0") then
+			routeResult = spaceSeperatedValues(line)
+			network['default_gateway'] = routeResult[2]
+			network['default_interface'] = routeResult[8]
+			break
+		end
+	end
+
+	so = lines(execute("ifconfig -a"))
+	local cint = nil
+	local match = nil
+	local match2 = nil
+	local match3 = nil
+	local match4 = nil
+	local match5 = nil
+	for key, line in pairs(so) do
+		tmp_addr = nil
+		-- dev_valid_name in the kernel only excludes slashes, nulls, spaces
+		-- http://git.kernel.org/?p=linux/kernel/git/stable/linux-stable.git;a=blob;f=net/core/dev.c#l851
+		cintMatch = string.match(line, "^([0-9a-zA-Z@.:_-]+)[:][%s]+")
+		if cintMatch == nil then
+			cintMatch = string.match(line, "^([0-9a-zA-Z@.:_-]+)[%s]+")
+		end
+		if cintMatch ~= nil then
+			cint = cintMatch
+			iface[cint] = {}
+			local cintType, cintNumber = string.match(cint, "(%w-)(%d+)$")
+			if cintType ~= nil and string.len(cintType) > 0 then
+				iface[cint]['type'] = cintType
+				iface[cint]['number'] = tonumber(cintNumber)
+			end
+		end
+
+		if cint ~= nil then
+			match = string.match(line, "Link encap:(Local Loopback)")
+			if match == nil then
+				match = string.match(line, "Link encap:(.-)%s")
+			end
+			if match ~= nil then
+				iface[cint]['encapsulation'] = linuxEncapsLookup(match)
+			end
+
+			match = string.match(line, "HWaddr (.-)%s")
+			if match ~= nil then
+				if iface[cint]['addresses'] == nil then
+					iface[cint]['addresses'] = {}
+				end
+				iface[cint]['addresses'][match] = {
+					family = "lladdr"
+				}
+			end
+
+			match = string.match(line, "inet addr:(%d+%.%d+%.%d+%.%d+)")
+			if match ~= nil then
+				if iface[cint]['addresses'] == nil then
+					iface[cint]['addresses'] = {}
+				end
+				iface[cint]['addresses'][match] = {
+					family = "inet"
+				}
+				tmp_addr = match
+			end
+
+
+			match, match2, match3 = string.match(line, "inet6 addr: ([a-f0-9:]+)%/(%d+) Scope:(%w+)")
+			if match ~= nil then
+				if iface[cint]['addresses'] == nil then
+					iface[cint]['addresses'] = {}
+				end
+				iface[cint]['addresses'][match] = {
+					family = "inet6",
+					prefixlen = match2
+				}
+
+				iface[cint]['addresses'][match]['scope'] = match3
+				if match3 == "Host" then
+					iface[cint]['addresses'][match]['scope'] = "Node"
+				end
+			end
+
+			if tmp_addr ~= nil then
+				match = string.match(line, "Bcast:(%d+%.%d+%.%d+%.%d+)")
+				if match ~= nil then
+					iface[cint]['addresses'][tmp_addr]['broadcast'] = match
+				end
+				
+				match = string.match(line, "Mask:(%d+%.%d+%.%d+%.%d+)")
+				if match ~= nil then
+					iface[cint]['addresses'][tmp_addr]['netmask'] = match
+				end
+			end
+
+			match = string.match(line, "MTU:(%d+)")
+			if match ~= nil then
+				iface[cint]['mtu'] = match
+			end
+
+			match = string.match(line, "P-t-P:(%d+%.%d+%.%d+%.%d+)")
+			if match ~= nil then
+				iface[cint]['peer'] = match
+			end
+
+			match, match2, match3, match4, match5 = string.match(line, "RX packets:(%d+) errors:(%d+) dropped:(%d+) overruns:(%d+) frame:(%d+)")
+			if match ~= nil then
+				if net_counters[cint] == nil then
+					net_counters[cint] = {}
+				end
+				net_counters[cint]['rx'] = {
+					packets = match,
+					errors = match2,
+					drop = match3,
+					overrun = match4,
+					frame = match5
+				}
+			end
+
+			match, match2, match3, match4, match5 = string.match(line, "TX packets:(%d+) errors:(%d+) dropped:(%d+) overruns:(%d+) carrier:(%d+)")
+			if match ~= nil then
+				if net_counters[cint] == nil then
+					net_counters[cint] = {}
+				end
+				net_counters[cint]['tx'] = {
+					packets = match,
+					errors = match2,
+					drop = match3,
+					overrun = match4,
+					carrier = match5
+				}
+			end
+
+			match = string.match(line, "collisions:(%d+)")
+			if match ~= nil then
+				net_counters[cint]['tx']['collisions'] = match
+			end
+			
+			match = string.match(line, "txqueuelen:(%d+)")
+			if match ~= nil then
+				net_counters[cint]['tx']['queuelen'] = match
+			end
+			
+			match = string.match(line, "RX bytes:(%d+) %((%d-%.%d+ .-)%)")
+			if match ~= nil then
+				net_counters[cint]['rx']['bytes'] = match
+			end
+
+			match = string.match(line, "TX bytes:(%d+) %((%d-%.%d+ .-)%)")
+			if match ~= nil then
+				net_counters[cint]['tx']['bytes'] = match
+			end
+
+		end
+	end
+
+	so = lines(fileGetContents("/proc/net/arp"))
+	for key, line in pairs(so) do
+		match, match2, match3, match4, match5 = string.match(line, "^(%d+%.%d+%.%d+%.%d+)%s+([a-zA-Z0-9:]+)%s+([a-zA-Z0-9:]+)%s+([0-9a-zA-Z.:-]+)%s+%S+%s+([a-zA-Z0-9:_.-]+)")
+		if match ~= nil then
+			if iface[match5] ~= nil then
+				if iface[match5]['arp'] == nil then
+					iface[match5]['arp'] = {}
+				end
+				iface[match5]['arp'][match] = string.lower(match4)
+			end
+		end
+	end
+
+	network["interfaces"] = iface
+
+	return network, net_counters
+end
+
+function ChefClient.ohai.filesystem()
+
+	local fs = {}
+	local filesystem = nil
+	local match, match2, match3, match4, match5, match6 = nil
+
+	-- Grab filesystem data from df
+	so = lines(execute("df -P"))
+	for key, line in pairs(so) do
+		match = string.match(line, "^Filesystem%s+1024%-blocks")
+		if match == nil then
+			match, match2, match3, match4, match5, match6 = string.match(line, "^(.-)%s+(%d+)%s+(%d+)%s+(%d+)%s+(%d+%%)%s+(.+)$")
+			if match ~= nil then
+				filesystem = match
+				fs[filesystem] = {}
+				fs[filesystem]['kb_size'] = match2
+				fs[filesystem]['kb_used'] = match3
+				fs[filesystem]['kb_available'] = match4
+				fs[filesystem]['percent_used'] = match5
+				fs[filesystem]['mount'] = match6
+			end
+		end
+	end
+	
+	return fs
+end
+
+function ChefClient.ohai.memory()
+	local data = {
+		swap = {}
+	}
+	local meminfo = lines(fileGetContents("/proc/meminfo"))
+
+	local matchValue = nil
+	local match = function(line, pattern)
+		local value, unit = string.match(line, pattern)
+		if value ~= nil and unit ~= nil then
+			matchValue = value .. unit
+			return true
+		end
+		return false
+	end
+
+	for key, line in pairs(meminfo) do
+		if		match(line, "MemTotal:[%s]+([0-9]+) (.+)") then
+			data['total'] = matchValue
+		elseif	match(line, "MemFree:[%s]+([%d]+) (.+)") then
+			data['free'] = matchValue
+		elseif	match(line, "Buffers:[%s]+([%d]+) (.+)") then
+			data['buffers'] = matchValue
+		elseif	match(line, "Cached:[%s]+([%d]+) (.+)") then
+			data['cached'] = matchValue
+		elseif	match(line, "Active:[%s]+([%d]+) (.+)") then
+			data['active'] = matchValue
+		elseif	match(line, "Inactive:[%s]+([%d]+) (.+)") then
+			data['inactive'] = matchValue
+		elseif	match(line, "HighTotal:[%s]+([%d]+) (.+)") then
+			data['high_total'] = matchValue
+		elseif	match(line, "HighFree:[%s]+([%d]+) (.+)") then
+			data['high_free'] = matchValue
+		elseif	match(line, "LowTotal:[%s]+([%d]+) (.+)") then
+			data['low_total'] = matchValue
+		elseif	match(line, "LowFree:[%s]+([%d]+) (.+)") then
+			data['low_free'] = matchValue
+		elseif	match(line, "Dirty:[%s]+([%d]+) (.+)") then
+			data['dirty'] = matchValue
+		elseif	match(line, "Writeback:[%s]+([%d]+) (.+)") then
+			data['writeback'] = matchValue
+		elseif	match(line, "AnonPages:[%s]+([%d]+) (.+)") then
+			data['anon_pages'] = matchValue
+		elseif	match(line, "Mapped:[%s]+([%d]+) (.+)") then
+			data['mapped'] = matchValue
+		elseif	match(line, "Slab:[%s]+([%d]+) (.+)") then
+			data['slab'] = matchValue
+		elseif	match(line, "SReclaimable:[%s]+([%d]+) (.+)") then
+			data['slab_reclaimable'] = matchValue
+		elseif	match(line, "SUnreclaim:[%s]+([%d]+) (.+)") then
+			data['slab_unreclaim'] = matchValue
+		elseif	match(line, "PageTables:[%s]+([%d]+) (.+)") then
+			data['page_tables'] = matchValue
+		elseif	match(line, "NFS_Unstable:[%s]+([%d]+) (.+)") then
+			data['nfs_unstable'] = matchValue
+		elseif	match(line, "Bounce:[%s]+([%d]+) (.+)") then
+			data['bounce'] = matchValue
+		elseif	match(line, "CommitLimit:[%s]+([%d]+) (.+)") then
+			data['commit_limit'] = matchValue
+		elseif	match(line, "Committed_AS:[%s]+([%d]+) (.+)") then
+			data['committed_as'] = matchValue
+		elseif	match(line, "VmallocTotal:[%s]+([%d]+) (.+)") then
+			data['vmalloc_total'] = matchValue
+		elseif	match(line, "VmallocUsed:[%s]+([%d]+) (.+)") then
+			data['vmalloc_used'] = matchValue
+		elseif	match(line, "VmallocChunk:[%s]+([%d]+) (.+)") then
+			data['vmalloc_chunk'] = matchValue
+		elseif	match(line, "SwapCached:[%s]+([%d]+) (.+)") then
+			data['swap']['cached'] = matchValue
+		elseif	match(line, "SwapTotal:[%s]+([%d]+) (.+)") then
+			data['swap']['total'] = matchValue
+		elseif	match(line, "SwapFree:[%s]+([%d]+) (.+)") then
+			data['swap']['free'] = matchValue
+		end
+	end
+
+	return data
+end
+
+
+function ChefClient.ohai.cpu()
+	local data = {}
+	local cpuinfo = lines(fileGetContents("/proc/cpuinfo"))
+
+	local realCpu = {}
+	local realCpuCount = 0
+	local currentCpu = 0
+	local cpuNumber = 0
+	local matchValue = nil
+	local match = function(line, pattern)
+		local value = string.match(line, pattern)
+		if value ~= nil then
+			matchValue = value
+			return true
+		end
+		return false
+	end
+
+	for key, line in pairs(cpuinfo) do
+		if 		match(line, 'processor%s+:%s(.+)') then
+			currentCpu = matchValue
+			data[currentCpu] = {}
+			cpuNumber = cpuNumber + 1
+		elseif	match(line, "vendor_id%s+:%s(.+)") then
+			data[currentCpu]['vendor_id'] = matchValue
+		elseif	match(line, "cpu family%s+:%s(.+)") then
+			data[currentCpu]['family'] = matchValue
+		elseif	match(line, "model%s+:%s(.+)") then
+			data[currentCpu]['model'] = matchValue
+		elseif	match(line, "stepping%s+:%s(.+)") then
+			data[currentCpu]['stepping'] = matchValue
+		elseif	match(line, "physical id%s+:%s(.+)") then
+			data[currentCpu]['physical_id'] = matchValue
+			if realCpu[matchValue] == nil then
+				realCpu[matchValue] = true
+				realCpuCount = realCpuCount + 1
+			end
+		elseif	match(line, "core id%s+:%s(.+)") then
+			data[currentCpu]['core_id'] = matchValue
+		elseif	match(line, "cpu cores%s+:%s(.+)") then
+			data[currentCpu]['cores'] = matchValue
+		elseif	match(line, "model name%s+:%s(.+)") then
+			data[currentCpu]['model_name'] = matchValue
+		elseif	match(line, "cpu MHz%s+:%s(.+)") then
+			data[currentCpu]['mhz'] = matchValue
+		elseif	match(line, "cache size%s+:%s(.+)") then
+			data[currentCpu]['cache_size'] = matchValue
+		elseif	match(line, "flags%s+:%s(.+)") then
+			data[currentCpu]['flags'] = spaceSeperatedValues(matchValue)
+		end
+	end
+
+	if realCpuCount == 0 then
+		realCpuCount = cpuNumber
+	end
+
+		data['total'] = cpuNumber
+		data['real'] = realCpuCount
+	return data
+end
+
+function ChefClient.ohai.uptime()
+	local data = spaceSeperatedValues(fileGetContents("/proc/uptime"))
+	local uptime = math.floor(tonumber(data[1]))
+	local idletime = math.floor(tonumber(data[2]))
+	return uptime, secondsToHuman(uptime), idletime, secondsToHuman(idletime)
+end
+
+function ChefClient.ohai.fqdn()
+	return execute("uname -n")
+end
+
+function ChefClient.ohai.hostname()
+	return ChefClient.ohai.fqdn()
+end
+
+function ChefClient.ohai.os()
+	local os = string.lower(execute("uname -s"))
+	local osVersion = execute("uname -r")
+
+	local platform = "unknown"
+	local platformFamily = "unknown"
+	local platformVersion = "unknown"
+
+	local lsbFile = nil
+
+	if isFile("/etc/lsb-release") then
+		lsbFile = "/etc/lsb-release"
+	elseif isFile("/etc/lsb_release") then
+		lsbFile = "/etc/lsb_release"
+	elseif isFile("/etc/openwrt_release") then
+		lsbFile = "/etc/openwrt_release"
+	end
+
+	if lsbFile ~= nil then
+		platform = string.lower(execute("source " .. lsbFile .. "; echo \"${DISTRIB_ID}\""))
+		platformFamily = platform
+		if platform == "ubuntu" then
+			platformFamily = "debian"
+		elseif platform == "centos" then
+			platformFamily = "rhel"
+		end
+		platformVersion = execute("source " .. lsbFile .. "; echo \"${DISTRIB_RELEASE}\"")
+	end
+
+	return os, osVersion, platform, platformFamily, platformVersion
+end
+
+function ChefClient.ohai.kernel()
+	local data = {}
+	data['name'] = execute("uname -s")
+	data['os'] = execute("uname -o")
+	data['release'] = execute("uname -r")
+	data['version'] = execute("uname -v")
+	return data
+end
 
 function ChefClient.mergeTable(input, override)
 	for key, value in pairs(override) do
@@ -295,28 +794,27 @@ function ChefClient.api.request(url, method, body, cache)
 	headers["Accept"] = "application/json"
 	headers["X-Ops-Content-Hash"] = hashedBody
 	headers["X-Ops-Sign"] = "version=1.0"
+	headers["Content-Type"] = "application/json"
 	headers["Content-Length"] = string.len(body)
 
 	local authHeadersData = string.gsub(execute("openssl rsautl -sign -inkey " .. clientCertificate .. " | openssl enc -base64", canonicalRequest), "\n", "")
 	local authHeadersDataSplitted = strSlipt(authHeadersData, 60)
 	local authHeaders = ""
 
-	local curlString = "curl -i -X " .. method
+	-- local curlString = "curl -i -X " .. method
 
 	for ip, str in pairs(authHeadersDataSplitted) do
 		headers["X-Ops-Authorization-" .. ip] = str
 	end
 
-	for key, value in pairs(headers) do
-		curlString = curlString .. " -H '" .. key .. ":" .. value .. "'"
-	end
+	-- for key, value in pairs(headers) do
+	-- 	curlString = curlString .. " -H '" .. key .. ":" .. value .. "'"
+	-- end
 
-	if body ~= "" then
-		curlString = curlString .. " -d '" .. body .. "'"
-	end
-	curlString = curlString .. " '" .. path .. "'"
-	
-
+	-- if body ~= "" then
+	-- 	curlString = curlString .. " -d '" .. body .. "'"
+	-- end
+	-- curlString = curlString .. " '" .. path .. "'"
 
 	local data = {}
 	local page, code, responseHeaders
@@ -733,6 +1231,21 @@ function ChefClient.api.getNodeMetadata(name, cache)
 		name = ChefClient.getNodeName()
 	end
 	local data = ChefClient.api.request("/nodes/" .. name, nil, nil, cache)
+	return data
+end
+
+function ChefClient.api.saveNode(data, name)
+	if name == nil then
+		name = ChefClient.getNodeName()
+	end
+	local node = ChefClient.api.getNodeMetadata(name)
+	data["name"] = name
+	data["chef_type"] = "node"
+	data["json_class"] = "Chef::Node"
+	if data["run_list"] == nil then
+		data["run_list"] = node["run_list"]
+	end
+	local data = ChefClient.api.request("/nodes/" .. name, "PUT", data)
 	return data
 end
 

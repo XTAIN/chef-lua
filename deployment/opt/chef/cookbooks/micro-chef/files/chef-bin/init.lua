@@ -68,9 +68,12 @@ end
 
 
 
-config_path = "/etc/chef/config.json"
+configData = file_get_contents("config.json")
+if configData == nil then
+    configData = file_get_contents("/etc/chef/config.json")
+end
 
-config = JSON:decode(file_get_contents(config_path))
+config = JSON:decode(configData)
 
 -- log(dump(config), LOG_LEVEL_DEBUG)
 
