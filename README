@@ -1,0 +1,45 @@
+
+                             Chef LUA Client
+
+  What is it?
+  -----------
+
+  The Chfe LUA Client is an alternative implementation of an subset of functionality
+  of the ruby chef client.
+  At XTAIN we use it to manage our OpenWRT routers. So it is only tested on OpenWRT
+  and the ohai support is only written to support OpenWRT currently.
+  It supports:
+
+     o Downloading correct versions of cookbooks assigned to roles and nodes
+     o Executing lua files in this cookbooks
+
+  Installation
+  ------------
+
+  To install the client on your router see the install.sh script.
+
+  Licensing
+  ---------
+
+  Please see the file called LICENSE.
+
+  Contacts
+  --------
+
+     o If you want to be informed about new code releases, bug fixes,
+       security fixes, general news and information about the project
+       please star the GitHub project under
+       <https://github.com/xtain/chef-lua>
+
+     o If you want commercial support for using chef-lua please contact
+       the XTAIN oHG (Germany).  They are the creators of chef-lua and offer
+       the best support for xun.io that money can buy.
+       <https://company.xtain.net/>
+
+     o If you have a concrete bug report for chef-lua please use the GitHub
+       bug tracker and submit your report.
+       <https://github.com/xtain/chef-lua/issues>
+
+     o If you want to participate in actively developing chef-lua please
+       send me some pull requests ;).
+       <https://github.com/xtain/chef-lua/pulls>
