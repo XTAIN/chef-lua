@@ -6,13 +6,16 @@ if [ -f "deployment/etc/chef/config.json" ]; then
   rm deployment/etc/chef/*
 fi
 
-server="https://chef.xtain.net"
-node="${1}"
-nodename="${2}"
-runlist="${3}"
-privatekeypath="${4}"
+server="${1}"
+node="${2}"
+nodename="${3}"
+runlist="${4}"
+privatekeypath="${5}"
 
 create-config() {
+  if [ -z "${server}" ]; then
+    read -p "Server: " server
+  fi
   if [ -z "${nodename}" ]; then
     read -p "Node name: " nodename
   fi
