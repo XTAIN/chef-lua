@@ -56,6 +56,49 @@ function file_put_contents(file, data)
   f:close()
 end
 
+function execute(command, input)
+    local handle
+    if input then
+        handle = io.popen("echo -n '" .. input .. "' | " .. command)
+    else
+        handle = io.popen(command)
+    end
+    local result = handle:read("*a")
+    handle:close()
+    return string.sub(result, 0, string.len(result) - 1)
+end
+
+function stat(option, file)
+    return execute("/usr/bin/stat -c %" .. option .. " '" .. file .. "'")
+end
+
+function file_ensure(file, content, owner, group, mode)
+    local changed = false
+
+    if content ~= file_get_contents(file) then
+        print(" => Install new file: " .. file)
+        file_put_contents(file, content)
+        changed = true
+    end
+
+    if owner ~= nil and owner ~= stat("U", file) then
+        os.execute("chown '" .. owner .. "'' '" .. file .. "'")
+        changed = true
+    end
+
+    if group ~= nil and group ~= stat("G", file) then
+        os.execute("chgrp '" .. group .. "'' '" .. file .. "'")
+        changed = true
+    end
+
+    if mode ~= nil and mode ~= tonumber(stat("a", file), 8) then
+        os.execute("chmod '" .. string.format("%o", mode) .. "'' '" .. file .. "'")
+        changed = true
+    end
+
+    return changed
+end
+
 function sleep(n)
   os.execute("sleep " .. tonumber(n))
 end

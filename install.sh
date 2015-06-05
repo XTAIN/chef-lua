@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Example: ./install.sh 172.16.1.1 wrt-individual-mruta "role[micro-router]"
+# Example: ./install.sh chef.xtain.net 172.16.1.1 wrt-individual-mruta "role[micro-router]"
 
 if [ -f "deployment/etc/chef/config.json" ]; then
   rm deployment/etc/chef/*

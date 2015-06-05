@@ -2,7 +2,7 @@
 
 echo "Install dependencies"
 opkg update
-opkg install lua luasec luasocket libopenssl openssl-util
+opkg install lua luasec luasocket libopenssl openssl-util coreutils-stat
 
 if [ -f "/etc/chef/config.json" ]; then
   chown root:root /etc/chef/*

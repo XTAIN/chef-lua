@@ -264,7 +264,7 @@ function ChefClient.ohai.get()
 	data['cpu'] = ChefClient.ohai.cpu()
 	data['filesystem'] = ChefClient.ohai.filesystem()
 	data['uptime_seconds'], data['uptime'], data['idletime_seconds'], data['idletime'] = ChefClient.ohai.uptime()
-	
+
 	if data['counters']['network'] == nil then
 		data['counters']['network'] = {}
 	end
@@ -391,7 +391,7 @@ function ChefClient.ohai.network()
 				if match ~= nil then
 					iface[cint]['addresses'][tmp_addr]['broadcast'] = match
 				end
-				
+
 				match = string.match(line, "Mask:(%d+%.%d+%.%d+%.%d+)")
 				if match ~= nil then
 					iface[cint]['addresses'][tmp_addr]['netmask'] = match
@@ -440,12 +440,12 @@ function ChefClient.ohai.network()
 			if match ~= nil then
 				net_counters[cint]['tx']['collisions'] = match
 			end
-			
+
 			match = string.match(line, "txqueuelen:(%d+)")
 			if match ~= nil then
 				net_counters[cint]['tx']['queuelen'] = match
 			end
-			
+
 			match = string.match(line, "RX bytes:(%d+) %((%d-%.%d+ .-)%)")
 			if match ~= nil then
 				net_counters[cint]['rx']['bytes'] = match
@@ -500,7 +500,7 @@ function ChefClient.ohai.filesystem()
 			end
 		end
 	end
-	
+
 	return fs
 end
 
@@ -1098,7 +1098,7 @@ function ChefClient.getRunList(nodeName, environment)
 
 	cookbooks = ChefClient.extractCookbooksFromRecipes(recipes)
 
-	return newRunList, recipes, cookbooks, roles 
+	return newRunList, recipes, cookbooks, roles
 end
 
 function ChefClient.selectCookbookVersion(cookbookVersions, version)
@@ -1182,10 +1182,10 @@ function ChefClient.executeShellRecipe(path)
 end
 
 function ChefClient.runSingle(item, dir)
-	local path = dir .. "/" .. item["cookbook"] .. "/recipes/" .. item["recipe"];
-	
-	if isFile(path .. ".rb") then
-		ChefClient.executeLuaRecipe(path .. ".rb")
+	local path = dir .. "/" .. item["cookbook"] .. "/files/recipes/" .. item["recipe"];
+
+	if isFile(path .. ".lua") then
+		ChefClient.executeLuaRecipe(path .. ".lua")
 	elseif isFile(path .. ".sh") then
 		ChefClient.executeShellRecipe(path .. ".sh")
 	end
