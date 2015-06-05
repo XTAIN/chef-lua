@@ -26,7 +26,7 @@ create-config() {
     fi;
     knife client show --no-color "${nodename}" > /dev/null 2>&1
     if [ "${?}" -eq "100" ]; then
-      PRIVATEKEY=$(knife client create -d "${nodename}" | tail -n +2)
+      PRIVATEKEY=$(knife client create -d "${nodename}")
     else
       while [ -z "${privatekeypath}" ]; do
         read -p "Client for '${nodename}' already exists. Please give me the path to the private key: " privatekeypath
