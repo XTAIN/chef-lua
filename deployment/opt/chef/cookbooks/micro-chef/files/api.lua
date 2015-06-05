@@ -1185,10 +1185,10 @@ function ChefClient.executeShellRecipe(path)
 end
 
 function ChefClient.runSingle(item, dir)
-	local path = dir .. "/" .. item["cookbook"] .. "/recipes/" .. item["recipe"];
+	local path = dir .. "/" .. item["cookbook"] .. "/files/" .. item["recipe"];
 	
-	if isFile(path .. ".rb") then
-		ChefClient.executeLuaRecipe(path .. ".rb")
+	if isFile(path .. ".lua") then
+		ChefClient.executeLuaRecipe(path .. ".lua")
 	elseif isFile(path .. ".sh") then
 		ChefClient.executeShellRecipe(path .. ".sh")
 	end
