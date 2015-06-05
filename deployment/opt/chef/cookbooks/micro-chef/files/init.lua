@@ -82,17 +82,17 @@ function file_ensure(file, content, owner, group, mode)
     end
 
     if owner ~= nil and owner ~= stat("U", file) then
-        os.execute("chown '" .. owner .. "'' '" .. file .. "'")
+        os.execute("chown '" .. owner .. "' '" .. file .. "'")
         changed = true
     end
 
     if group ~= nil and group ~= stat("G", file) then
-        os.execute("chgrp '" .. group .. "'' '" .. file .. "'")
+        os.execute("chgrp '" .. group .. "' '" .. file .. "'")
         changed = true
     end
 
     if mode ~= nil and mode ~= tonumber(stat("a", file), 8) then
-        os.execute("chmod '" .. string.format("%o", mode) .. "'' '" .. file .. "'")
+        os.execute("chmod '" .. string.format("%o", mode) .. "' '" .. file .. "'")
         changed = true
     end
 
