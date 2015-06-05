@@ -20,10 +20,6 @@ create-config() {
     read -p "Node name: " nodename
   fi
   if [ "${nodename}" ]; then
-    knife node show -E --no-color "${nodename}" > /dev/null 2>&1
-    if [ "${?}" -eq "100" ]; then
-      knife node create -d "${nodename}"
-    fi;
     knife client show --no-color "${nodename}" > /dev/null 2>&1
     if [ "${?}" -eq "100" ]; then
       PRIVATEKEY=$(knife client create -d "${nodename}")
@@ -31,11 +27,72 @@ create-config() {
       while [ -z "${privatekeypath}" ]; do
         read -p "Client for '${nodename}' already exists. Please give me the path to the private key: " privatekeypath
         if [ "${privatekeypath}" ] && ! [ -f "${privatekeypath}" ]; then
-        	echo "'${privatekeypath}' is not a file."
-        	privatekeypath=""
+          echo "'${privatekeypath}' is not a file."
+          privatekeypath=""
         fi
       done
       PRIVATEKEY=$(cat "${privatekeypath}")
+    fi;
+
+    knife node show -E --no-color "${nodename}" > /dev/null 2>&1
+    if [ "${?}" -eq "100" ]; then
+      knife node create -d "${nodename}"
+      EDITOR="tee" knife edit "/acls/nodes/${nodename}.json" <<EOF
+{
+  "create": {
+    "actors": [
+      "${nodename}",
+      "pivotal"
+    ],
+    "groups": [
+      "admins",
+      "clients",
+      "users"
+    ]
+  },
+  "read": {
+    "actors": [
+      "${nodename}",
+      "pivotal"
+    ],
+    "groups": [
+      "admins",
+      "clients",
+      "users"
+    ]
+  },
+  "update": {
+    "actors": [
+      "${nodename}",
+      "pivotal"
+    ],
+    "groups": [
+      "admins",
+      "users"
+    ]
+  },
+  "delete": {
+    "actors": [
+      "${nodename}",
+      "pivotal"
+    ],
+    "groups": [
+      "admins",
+      "users"
+    ]
+  },
+  "grant": {
+    "actors": [
+      "${nodename}",
+      "pivotal"
+    ],
+    "groups": [
+      "admins"
+    ]
+  }
+}
+EOF
+
     fi;
 
     if [ -z "${runlist}" ]; then
