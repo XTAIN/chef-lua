@@ -779,7 +779,7 @@ function ChefClient.api.request(url, method, body, cache)
 
 	local endpoint = url
 	if string.match(ChefClient["config"]["server"], "/organizations/") then
-		endpoint = string.match(server, "/organizations/.*") .. endpoint
+		endpoint = string.match(ChefClient["config"]["server"], "/organizations/.*") .. endpoint
 	end
 	local clientCertificate = ChefClient["config"]["client"]["key"]
 	local path = ChefClient["config"]["server"] .. url
