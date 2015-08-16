@@ -137,7 +137,7 @@ else
 fi
 
 cd deployment/
-tar cf - * | ssh root@${node} '(cd /; tar xf - ; /opt/chef/setup)'
+tar cf --owner=0 --group=0 - * | ssh root@${node} '(cd /; tar xf - ; /opt/chef/setup)'
 
 if [ -f "deployment/etc/chef/config.json" ]; then
   rm deployment/etc/chef/*

@@ -1,4 +1,6 @@
 #!/bin/ash
 
+echo "timer" > /sys/class/leds/tp-link:green:qss/trigger
 cd /opt/chef/bin
 lua chef-client.lua
+echo "none" > /sys/class/leds/tp-link:green:qss/trigger

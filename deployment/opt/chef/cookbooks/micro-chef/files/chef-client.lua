@@ -9,7 +9,7 @@ local data = {
   automatic = ChefClient.ohai.get()
 }
 
-ChefClient.api.saveNode(data)
+writeAttributes(data)
 
 child("manage.lua")
 child("run.lua")

@@ -45,6 +45,16 @@ local child = function(script)
 	os.execute("lua " .. script)
 end
 
+local urlencode = function(str)
+	if (str) then
+		str = string.gsub (str, "\n", "\r\n")
+		str = string.gsub (str, "([^%w ])",
+			function (c) return string.format ("%%%02X", string.byte(c)) end)
+		str = string.gsub (str, " ", "+")
+	end
+	return str
+end
+
 local isArray = function(t)
 	if type(t) ~= "table" then
 		return false
@@ -264,7 +274,7 @@ function ChefClient.ohai.get()
 	data['cpu'] = ChefClient.ohai.cpu()
 	data['filesystem'] = ChefClient.ohai.filesystem()
 	data['uptime_seconds'], data['uptime'], data['idletime_seconds'], data['idletime'] = ChefClient.ohai.uptime()
-	
+
 	if data['counters']['network'] == nil then
 		data['counters']['network'] = {}
 	end
@@ -391,7 +401,7 @@ function ChefClient.ohai.network()
 				if match ~= nil then
 					iface[cint]['addresses'][tmp_addr]['broadcast'] = match
 				end
-				
+
 				match = string.match(line, "Mask:(%d+%.%d+%.%d+%.%d+)")
 				if match ~= nil then
 					iface[cint]['addresses'][tmp_addr]['netmask'] = match
@@ -440,12 +450,12 @@ function ChefClient.ohai.network()
 			if match ~= nil then
 				net_counters[cint]['tx']['collisions'] = match
 			end
-			
+
 			match = string.match(line, "txqueuelen:(%d+)")
 			if match ~= nil then
 				net_counters[cint]['tx']['queuelen'] = match
 			end
-			
+
 			match = string.match(line, "RX bytes:(%d+) %((%d-%.%d+ .-)%)")
 			if match ~= nil then
 				net_counters[cint]['rx']['bytes'] = match
@@ -500,7 +510,7 @@ function ChefClient.ohai.filesystem()
 			end
 		end
 	end
-	
+
 	return fs
 end
 
@@ -781,6 +791,7 @@ function ChefClient.api.request(url, method, body, cache)
 	if string.match(ChefClient["config"]["server"], "/organizations/") then
 		endpoint = string.match(ChefClient["config"]["server"], "/organizations/.*") .. endpoint
 	end
+	endpoint = endpoint:gsub("?.*", "")
 	local clientCertificate = ChefClient["config"]["client"]["key"]
 	local path = ChefClient["config"]["server"] .. url
 	local clientName = ChefClient["config"]["client"]["name"]
@@ -1101,7 +1112,7 @@ function ChefClient.getRunList(nodeName, environment)
 
 	cookbooks = ChefClient.extractCookbooksFromRecipes(recipes)
 
-	return newRunList, recipes, cookbooks, roles 
+	return newRunList, recipes, cookbooks, roles
 end
 
 function ChefClient.selectCookbookVersion(cookbookVersions, version)
@@ -1186,7 +1197,7 @@ end
 
 function ChefClient.runSingle(item, dir)
 	local path = dir .. "/" .. item["cookbook"] .. "/files/" .. item["recipe"];
-	
+
 	if isFile(path .. ".lua") then
 		ChefClient.executeLuaRecipe(path .. ".lua")
 	elseif isFile(path .. ".sh") then
@@ -1269,6 +1280,38 @@ function ChefClient.api.getEnvironment(name, cache)
 	end
 	local data = ChefClient.api.request("/environments/" .. name, nil, nil, cache)
 	return data
+end
+
+
+function ChefClient.api.search(query, filter, callback)
+	query = urlencode(query)
+	cache = cache or ChefClient.REQUEST_CACHE_READ_WRITE
+	local data
+	local i = 0
+	local left = 0
+	if callback == nil then
+		if filter == nil then
+			data = ChefClient.api.request("/search/node?q=" .. query, nil, nil, cache)
+		else
+			data = ChefClient.api.request("/search/node?q=" .. query, "POST", filter, cache)
+		end
+
+		return data
+	else
+		repeat
+			if filter == nil then
+				data = ChefClient.api.request("/search/node?rows=1&start=" .. i .. "&q=" .. query, nil, nil, cache)
+			else
+				data = ChefClient.api.request("/search/node?rows=1&start=" .. i .. "&q=" .. query, "POST", filter, cache)
+			end
+			i = i + 1
+			left = data["total"] - i
+
+			if data["rows"][1] ~= nil then
+				callback(data["rows"][1])
+			end
+		until left <= 0
+	end
 end
 
 return ChefClient
